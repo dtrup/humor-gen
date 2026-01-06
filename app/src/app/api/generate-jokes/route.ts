@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { anthropic, MODEL, MAX_TOKENS, HUMOR_SYSTEM_PROMPT } from "@/lib/anthropic";
+import { generateContent } from "@/lib/gemini";
+import { HUMOR_SYSTEM_PROMPT } from "@/lib/constants";
 import { createGenerateJokesPrompt } from "@/lib/prompts/generate-jokes";
 import { AUDIENCES } from "@/lib/constants";
 import type { GenerateJokesRequest } from "@/lib/types";
@@ -37,27 +38,11 @@ export async function POST(request: NextRequest) {
       audienceContext
     );
 
-    // Call Claude
-    const message = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: MAX_TOKENS,
-      system: HUMOR_SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-    });
-
-    // Extract text content
-    const textContent = message.content.find((block) => block.type === "text");
-    if (!textContent || textContent.type !== "text") {
-      throw new Error("No text response from Claude");
-    }
+    // Call Gemini
+    const textContent = await generateContent(HUMOR_SYSTEM_PROMPT, prompt);
 
     // Parse JSON from response
-    const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
+    const jsonMatch = textContent.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error("Could not parse JSON from response");
     }

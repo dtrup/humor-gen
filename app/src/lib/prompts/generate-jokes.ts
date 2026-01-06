@@ -76,7 +76,7 @@ Return a JSON object:
 4. **Economy**: Maximum payoff per word - don't overexplain
 5. **Twist Placement**: Put the twist word as late as possible
 
-Generate 3 distinct candidates using different operations or targeting different aspects of the bindings.`;
+Generate 5 distinct candidates using different operations or targeting different aspects of the bindings.`;
 }
 
 function getVoiceDescription(voice: ComedyVoice): string {

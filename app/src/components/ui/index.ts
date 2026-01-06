@@ -7,3 +7,5 @@ export { ScoreBar, ScoreBarGroup } from "./score-bar";
 export { Tag, TagGroup } from "./tag";
 export { Expandable, ExpandablePanel } from "./expandable";
 export { SelectCard, SelectButtonGroup, Tabs } from "./select";
+export { ConceptTooltip, CONCEPTS } from "./concept-tooltip";
+

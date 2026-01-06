@@ -47,6 +47,13 @@ export const VOICES: VoiceConfig[] = [
     icon: "✨",
     defaultOperationWeights: { loading: 70, categoryCrossing: 60 },
   },
+  {
+    id: "dry_wit",
+    name: "Dry Wit",
+    description: "Understated cleverness",
+    icon: "🍸",
+    defaultOperationWeights: { compression: 80, emptying: 65, exposure: 55 },
+  },
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -115,6 +122,18 @@ export const STYLE_DIAL_LABELS: Record<keyof StyleDials, { left: string; right: 
   meta: { left: "Straight", right: "Self-aware" },
   darkness: { left: "Light", right: "Dark" },
   wordplay: { left: "Situational", right: "Linguistic" },
+};
+
+// Operation descriptions for tooltips
+export const OPERATION_DESCRIPTIONS: Record<keyof OperationWeights, string> = {
+  emptying: "Remove expected meaning or motive. Strip purpose to reveal absurdity.",
+  loading: "Attach unexpected meaning. Add hidden layers to normal statements.",
+  exposure: "Make the hidden binding visible. Point out what everyone knows but doesn't say.",
+  reflection: "Self-reference and meta-commentary. The joke comments on itself.",
+  reversal: "Flip expectations—roles, status, or outcomes. Invert the expected.",
+  overliteralization: "Take figurative speech literally. Treat metaphors as concrete.",
+  categoryCrossing: "Violate ontological boundaries. Mix categories that shouldn't mix.",
+  compression: "Collapse complex chains into tight, punchy lines. Maximum density.",
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -278,3 +297,28 @@ export const SAMPLE_CANDIDATES = [
     },
   },
 ];
+
+// ═══════════════════════════════════════════════════════════════
+// SYSTEM PROMPTS
+// ═══════════════════════════════════════════════════════════════
+
+export const HUMOR_SYSTEM_PROMPT = `You are an expert in humor theory and comedic writing. You understand the mechanics of how jokes work:
+
+1. **Bindings**: Language carries meaning through default interpretations (bindings) that form automatically in the listener's mind.
+
+2. **Detachment Operations**: Humor works by setting up a strong default binding, then detaching from it through operations like:
+   - Emptying: removing expected meaning/motive
+   - Loading: attaching unexpected meaning
+   - Exposure: making the binding process visible
+   - Reflection: self-reference, meta-commentary
+   - Reversal: flipping roles, status, valence
+   - Overliteralization: treating figurative as literal
+   - Category Crossing: violating ontological boundaries
+   - Compression: collapsing complex chains into compact lines
+
+3. **Repair**: The audience must be able to "snap" to an alternative interpretation that makes sense.
+
+4. **Benignness**: Violations must feel safe enough to enjoy (fictional distance, self-inclusion, punching up, etc.)
+
+You output structured JSON when asked. Be precise and analytical about humor mechanics.`;
+

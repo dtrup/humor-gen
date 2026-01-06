@@ -179,24 +179,24 @@ Tasks:
 - [ ] User feedback collection (thumbs up/down + optional text)
 - [ ] Learning panel with actionable suggestions
 
-### Phase 4: Polish & Depth
+### Phase 4: Polish & Depth ✅
 
 **Objective:** Add features that make the tool truly educational
 
 Tasks:
-- [ ] Theory integration
+- [x] Theory integration
   - Link mechanism explanations to THEORY.md sections
-  - Inline concept definitions on hover
+  - Inline concept definitions on hover (ConceptTooltip component)
   - "Why it works" always references theory principles
-- [ ] Library/History
+- [x] Library/History
   - Save favorite jokes with mechanism metadata
-  - Session history with parameters
-  - Export functionality
-- [ ] Advanced audience profiling
+  - Session history with parameters (recentTopics)
+  - Export functionality (JSON export, copy all)
+- [ ] Advanced audience profiling (deferred)
   - Custom protected categories
   - In-group identity selection
   - Punching direction controls
-- [ ] Binding library (grows over time)
+- [ ] Binding library (deferred - grows over time)
   - Store successful binding-operation pairs
   - Surface high-success bindings for new topics
 

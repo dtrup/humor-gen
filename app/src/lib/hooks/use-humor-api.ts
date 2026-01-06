@@ -134,7 +134,11 @@ export function useGenerateJokes() {
     []
   );
 
-  return { generateJokes, isLoading, error, candidates };
+  const clearCandidates = useCallback(() => {
+    setCandidates([]);
+  }, []);
+
+  return { generateJokes, isLoading, error, candidates, clearCandidates };
 }
 
 export function useAnalyzeJoke() {
@@ -182,3 +186,78 @@ export function useAnalyzeJoke() {
 
   return { analyzeJoke, isLoading, error, analysis };
 }
+
+type MutationType =
+  | "sharpen_twist"
+  | "increase_misdirection"
+  | "trim_setup"
+  | "swap_operation"
+  | "change_format"
+  | "amplify_violation";
+
+interface MutationResult {
+  mutatedJoke: string;
+  changes: string[];
+  newTwistWord: string;
+  explanation: string;
+  scores: JokeScores;
+  mutationType: MutationType;
+  originalJoke: string;
+}
+
+export function useMutateJoke() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<MutationResult | null>(null);
+
+  const mutateJoke = useCallback(
+    async (
+      jokeText: string,
+      mutationType: MutationType,
+      currentMechanism: {
+        operation: string;
+        twistWord: string;
+        setup: string;
+        alternative: string;
+      },
+      voice: ComedyVoice,
+      format: JokeFormat = "one_liner"
+    ) => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/mutate-joke", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jokeText,
+            mutationType,
+            currentMechanism,
+            voice,
+            format,
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || "Failed to mutate joke");
+        }
+
+        const data: MutationResult = await response.json();
+        setResult(data);
+        return data;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  return { mutateJoke, isLoading, error, result };
+}
+
