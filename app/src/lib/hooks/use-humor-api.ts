@@ -1,0 +1,184 @@
+"use client";
+
+import { useState, useCallback } from "react";
+import type {
+  Binding,
+  ComedyVoice,
+  OperationWeights,
+  StyleDials,
+  JokeFormat,
+  ExtractBindingsResponse,
+  JokeScores,
+  FailureAnalysis,
+} from "../types";
+
+interface GeneratedCandidate {
+  id: string;
+  text: string;
+  format: JokeFormat;
+  setup: string;
+  twist: string;
+  twistWord: string;
+  targetBindingId: string;
+  operation: string;
+  violationType: string;
+  alternativeModel: string;
+  repairPath: string;
+  benignessStrategy: string;
+  scores: JokeScores;
+  voice: ComedyVoice;
+  created: string;
+}
+
+interface AnalysisResult {
+  mechanism: {
+    default: string;
+    twist: string;
+    twistWord: string;
+    alternative: string;
+    repairPath: string;
+    benignessStrategy: string;
+  };
+  scores: JokeScores;
+  failureAnalysis: FailureAnalysis;
+  strengths: string[];
+  improvements: string[];
+}
+
+export function useExtractBindings() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<ExtractBindingsResponse | null>(null);
+
+  const extractBindings = useCallback(
+    async (topic: string, voice: ComedyVoice, audienceId: string) => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/extract-bindings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ topic, voice, audienceId }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || "Failed to extract bindings");
+        }
+
+        const data: ExtractBindingsResponse = await response.json();
+        setResult(data);
+        return data;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  return { extractBindings, isLoading, error, result };
+}
+
+export function useGenerateJokes() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<GeneratedCandidate[]>([]);
+
+  const generateJokes = useCallback(
+    async (
+      selectedBindings: Binding[],
+      operationWeights: OperationWeights,
+      styleDials: StyleDials,
+      voice: ComedyVoice,
+      audienceId: string,
+      format: JokeFormat = "one_liner"
+    ) => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/generate-jokes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            selectedBindings,
+            operationWeights,
+            styleDials,
+            voice,
+            audienceId,
+            format,
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || "Failed to generate jokes");
+        }
+
+        const data = await response.json();
+        setCandidates(data.candidates);
+        return data.candidates;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  return { generateJokes, isLoading, error, candidates };
+}
+
+export function useAnalyzeJoke() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+
+  const analyzeJoke = useCallback(
+    async (
+      jokeText: string,
+      intendedMechanism?: {
+        defaultBinding: string;
+        operation: string;
+        alternative: string;
+      }
+    ) => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jokeText, intendedMechanism }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || "Failed to analyze joke");
+        }
+
+        const data: AnalysisResult = await response.json();
+        setAnalysis(data);
+        return data;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  return { analyzeJoke, isLoading, error, analysis };
+}

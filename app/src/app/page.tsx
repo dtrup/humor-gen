@@ -19,17 +19,16 @@ import {
   DEFAULT_OPERATION_WEIGHTS,
   DEFAULT_STYLE_DIALS,
   STYLE_DIAL_LABELS,
-  SAMPLE_BINDINGS,
-  SAMPLE_CANDIDATES,
 } from "@/lib/constants";
-import type { OperationWeights, StyleDials, Binding } from "@/lib/types";
+import { useExtractBindings, useGenerateJokes } from "@/lib/hooks/use-humor-api";
+import type { OperationWeights, StyleDials, Binding, ComedyVoice } from "@/lib/types";
 
 type TabId = "generate" | "theory" | "library";
 
 export default function HumorLab() {
   // Core state
   const [topic, setTopic] = useState("");
-  const [voice, setVoice] = useState("observational");
+  const [voice, setVoice] = useState<ComedyVoice>("observational");
   const [audience, setAudience] = useState("general");
   const [activeTab, setActiveTab] = useState<TabId>("generate");
 
@@ -42,34 +41,53 @@ export default function HumorLab() {
   const [operationWeights, setOperationWeights] = useState<OperationWeights>(DEFAULT_OPERATION_WEIGHTS);
   const [styleDials, setStyleDials] = useState<StyleDials>(DEFAULT_STYLE_DIALS);
 
-  // Results
-  const [candidates, setCandidates] = useState<typeof SAMPLE_CANDIDATES>([]);
+  // API hooks
+  const {
+    extractBindings,
+    isLoading: isExtractingBindings,
+    error: extractError,
+  } = useExtractBindings();
 
-  // Get bindings for current topic
-  const getBindingsForTopic = () => {
-    const key = Object.keys(SAMPLE_BINDINGS).find((k) =>
-      topic.toLowerCase().includes(k)
-    );
-    return key ? SAMPLE_BINDINGS[key] : SAMPLE_BINDINGS["video calls"];
-  };
+  const {
+    generateJokes,
+    isLoading: isGeneratingJokes,
+    error: generateError,
+    candidates,
+  } = useGenerateJokes();
 
   // Handle extract bindings
-  const handleExtractBindings = () => {
+  const handleExtractBindings = async () => {
     if (!topic) return;
 
-    const topicBindings = getBindingsForTopic();
-    setBindings(topicBindings);
-    setShowBindings(true);
+    try {
+      const result = await extractBindings(topic, voice, audience);
+      setBindings(result.bindings);
+      setShowBindings(true);
+      setSelectedBindingIds([]);
+    } catch {
+      // Error is handled by the hook
+    }
+  };
 
-    // Auto-show candidates for video calls demo
-    if (
-      topic.toLowerCase().includes("video") ||
-      topic.toLowerCase().includes("call") ||
-      topic.toLowerCase().includes("zoom")
-    ) {
-      setCandidates(SAMPLE_CANDIDATES);
-    } else {
-      setCandidates([]);
+  // Handle generate jokes
+  const handleGenerateJokes = async () => {
+    const selectedBindings = bindings.filter((b) =>
+      selectedBindingIds.includes(b.id)
+    );
+
+    if (selectedBindings.length === 0) return;
+
+    try {
+      await generateJokes(
+        selectedBindings,
+        operationWeights,
+        styleDials,
+        voice,
+        audience,
+        "one_liner"
+      );
+    } catch {
+      // Error is handled by the hook
     }
   };
 
@@ -125,6 +143,28 @@ export default function HumorLab() {
     { id: "library" as const, label: "Library" },
   ];
 
+  // Find lowest scoring dimension for learning panel
+  const getLowestDimension = (): string | null => {
+    if (candidates.length === 0) return null;
+    const lastCandidate = candidates[candidates.length - 1];
+    const scores = lastCandidate.scores;
+    const dimensions = ["economy", "originality", "repairability"];
+    let lowest = "economy";
+    let lowestScore = 1;
+
+    for (const dim of dimensions) {
+      const score = scores[dim as keyof typeof scores];
+      if (typeof score === "number" && score < lowestScore) {
+        lowest = dim;
+        lowestScore = score;
+      }
+    }
+
+    return lowestScore < 0.7 ? lowest : null;
+  };
+
+  const lowestDimension = getLowestDimension();
+
   return (
     <div className="min-h-screen bg-bg-base p-6">
       {/* Header */}
@@ -157,15 +197,19 @@ export default function HumorLab() {
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 placeholder="video calls, gym, dating apps..."
+                onKeyDown={(e) => e.key === "Enter" && handleExtractBindings()}
               />
               <Button
                 fullWidth
-                disabled={!topic}
+                disabled={!topic || isExtractingBindings}
                 onClick={handleExtractBindings}
                 className="mt-3"
               >
-                Extract Bindings →
+                {isExtractingBindings ? "Extracting..." : "Extract Bindings →"}
               </Button>
+              {extractError && (
+                <p className="mt-2 text-xs text-error">{extractError}</p>
+              )}
             </Card>
 
             {/* Voice Selection */}
@@ -174,7 +218,7 @@ export default function HumorLab() {
               <SelectCard
                 options={voiceOptions}
                 value={voice}
-                onChange={setVoice}
+                onChange={(v) => setVoice(v as ComedyVoice)}
                 columns={2}
               />
             </Card>
@@ -233,16 +277,30 @@ export default function HumorLab() {
                   <CardTitle>Extracted Bindings</CardTitle>
                   <span className="text-xs text-fg-muted">Click to target</span>
                 </div>
-                <BindingGrid
-                  bindings={bindings}
-                  selectedIds={selectedBindingIds}
-                  onToggle={toggleBinding}
-                />
-                {selectedBindingIds.length > 0 && (
-                  <Button className="mt-4">
-                    Generate from {selectedBindingIds.length} binding
-                    {selectedBindingIds.length > 1 ? "s" : ""} →
-                  </Button>
+                {bindings.length > 0 ? (
+                  <>
+                    <BindingGrid
+                      bindings={bindings}
+                      selectedIds={selectedBindingIds}
+                      onToggle={toggleBinding}
+                    />
+                    {selectedBindingIds.length > 0 && (
+                      <Button
+                        className="mt-4"
+                        onClick={handleGenerateJokes}
+                        disabled={isGeneratingJokes}
+                      >
+                        {isGeneratingJokes
+                          ? "Generating..."
+                          : `Generate from ${selectedBindingIds.length} binding${selectedBindingIds.length > 1 ? "s" : ""} →`}
+                      </Button>
+                    )}
+                    {generateError && (
+                      <p className="mt-2 text-xs text-error">{generateError}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-fg-muted text-sm">No bindings found for this topic.</p>
                 )}
               </Card>
             )}
@@ -257,10 +315,16 @@ export default function HumorLab() {
                       key={candidate.id}
                       id={candidate.id}
                       text={candidate.text}
-                      operation={candidate.operation}
-                      violationType={candidate.violationType}
+                      operation={candidate.operation as "exposure" | "loading" | "emptying" | "reflection" | "reversal" | "overliteralization" | "categoryCrossing" | "compression"}
+                      violationType={candidate.violationType as "semantic" | "pragmatic" | "causal" | "epistemic" | "normative" | "narrative"}
                       scores={candidate.scores}
-                      mechanism={candidate.mechanism}
+                      mechanism={{
+                        default: `${candidate.setup} → default interpretation`,
+                        twist: candidate.twist,
+                        repairPath: candidate.repairPath,
+                        twistWord: candidate.twistWord,
+                        benignness: candidate.benignessStrategy,
+                      }}
                       onRate={(rating) => console.log(`Rated ${candidate.id}: ${rating}`)}
                       onEdit={() => console.log(`Edit ${candidate.id}`)}
                       onVariations={() => console.log(`Variations for ${candidate.id}`)}
@@ -272,26 +336,26 @@ export default function HumorLab() {
             )}
 
             {/* Learning Panel */}
-            {candidates.length > 0 && (
+            {candidates.length > 0 && lowestDimension && (
               <LearningPanel
-                dimension="economy"
+                dimension={lowestDimension}
                 failureAnalysis={{
                   failureMode: "overexplained",
-                  diagnosis:
-                    'The setup ("having technical difficulties") is explained rather than implied, which reduces the snap. The audience should discover the euphemism, not be told it exists.',
+                  diagnosis: `This joke could be stronger on ${lowestDimension}. Consider tightening the setup or finding a sharper twist.`,
                   suggestions: [
-                    "Trust the audience",
-                    "Don't explain the mechanism—let them experience the repair",
+                    "Trust the audience more",
+                    "Cut unnecessary setup words",
+                    "Move the twist word later",
                   ],
                 }}
-                principle="Trust the audience. Don't explain the mechanism—let them experience the repair."
+                principle="Economy matters. Maximum payoff per word."
                 suggestions={[
-                  "Use a more accessible alternative meaning",
-                  "Add a subtle cue that hints at the needed knowledge",
-                  "Try a different binding from this topic",
+                  "Try a different operation",
+                  "Sharpen the twist word",
+                  "Consider a different binding",
                 ]}
                 onTryFix={() => console.log("Try fix")}
-                onSeeTheory={() => console.log("See theory")}
+                onSeeTheory={() => setActiveTab("theory")}
               />
             )}
           </div>
