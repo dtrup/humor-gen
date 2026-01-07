@@ -341,15 +341,7 @@ export default function HumorLab() {
                 onClick={handleExtractBindings}
                 className="mt-3"
               >
-                {isExtractingBindings ? "Extracting..." : (
-                  <>
-                    Extract{" "}
-                    <ConceptTooltip {...CONCEPTS.binding} onLearnMore={() => setActiveTab("theory")}>
-                      Bindings
-                    </ConceptTooltip>
-                    {" →"}
-                  </>
-                )}
+                {isExtractingBindings ? "Extracting..." : "Extract Bindings →"}
               </Button>
               {extractError && (
                 <p className="mt-2 text-xs text-error">{extractError}</p>

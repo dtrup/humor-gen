@@ -36,12 +36,12 @@ export function ConceptTooltip({
                         <p className="text-xs text-fg-muted italic mb-2">"{example}"</p>
                     )}
                     {onLearnMore && (
-                        <button
+                        <span
                             onClick={onLearnMore}
-                            className="text-xs text-accent hover:underline"
+                            className="text-xs text-accent hover:underline cursor-pointer"
                         >
                             Learn more →
-                        </button>
+                        </span>
                     )}
                     {/* Arrow pointing down */}
                     <div className="absolute left-4 bottom-0 translate-y-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-border" />
